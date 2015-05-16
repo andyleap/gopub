@@ -23,6 +23,7 @@ type GoPub struct {
 	subs        map[int64]*Subscription
 	subSync     sync.Mutex
 	Hub         *url.URL
+	CurID       int64
 }
 
 func New(ds DataStorage) *GoPub {
@@ -31,6 +32,11 @@ func New(ds DataStorage) *GoPub {
 		subQueue:    make(chan *subRequest),
 		DataStorage: ds,
 		subs:        subs,
+	}
+	for k := range subs {
+		if k >= gp.CurID {
+			gp.CurID = k + 1
+		}
 	}
 	go func() {
 		for {
@@ -52,8 +58,6 @@ type Subscription struct {
 	Callback    *url.URL
 	LeaseExpire time.Time
 }
-
-var CurID int64 = 0
 
 type DataStorage interface {
 	AddSub(int64, *Subscription)
@@ -136,7 +140,7 @@ func (gp *GoPub) processSubQueue() {
 		defer gp.subSync.Unlock()
 		if req.mode == "subscribe" {
 			subscription := &Subscription{
-				ID:          atomic.AddInt64(&CurID, 1),
+				ID:          atomic.AddInt64(&gp.CurID, 1),
 				Topic:       req.topic,
 				Callback:    req.callback,
 				LeaseExpire: time.Now().Add(60 * 60 * 24 * 7 * time.Second),
