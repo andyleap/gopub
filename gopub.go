@@ -29,7 +29,7 @@ type GoPub struct {
 func New(ds DataStorage) *GoPub {
 	subs := ds.GetSubs()
 	gp := &GoPub{
-		subQueue:    make(chan *subRequest),
+		subQueue:    make(chan *subRequest, 100),
 		DataStorage: ds,
 		subs:        subs,
 	}
