@@ -66,9 +66,18 @@ type DataStorage interface {
 }
 
 func (gp *GoPub) HubEndpoint(rw http.ResponseWriter, req *http.Request) {
-	mode := req.FormValue("hub.mode")
-	topic := req.FormValue("hub.topic")
-	callback := req.FormValue("hub.callback")
+	mode := req.FormValue("mode")
+	topic := req.FormValue("topic")
+	callback := req.FormValue("callback")
+	if mode == "" {
+		mode = req.FormValue("hub.mode")
+	}
+	if topic == "" {
+		topic = req.FormValue("hub.topic")
+	}
+	if callback == "" {
+		callback = req.FormValue("hub.callback")
+	}
 
 	topicURL, err := url.Parse(topic)
 	if err != nil {
