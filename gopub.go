@@ -50,6 +50,7 @@ type subRequest struct {
 	mode     string
 	topic    *url.URL
 	callback *url.URL
+	prefix   bool
 }
 
 type Subscription struct {
@@ -66,11 +67,15 @@ type DataStorage interface {
 }
 
 func (gp *GoPub) HubEndpoint(rw http.ResponseWriter, req *http.Request) {
+	prefix := false
 	mode := req.FormValue("mode")
 	topic := req.FormValue("topic")
 	callback := req.FormValue("callback")
 	if mode == "" {
 		mode = req.FormValue("hub.mode")
+		if mode != "" {
+			prefix = true
+		}
 	}
 	if topic == "" {
 		topic = req.FormValue("hub.topic")
@@ -93,6 +98,7 @@ func (gp *GoPub) HubEndpoint(rw http.ResponseWriter, req *http.Request) {
 		mode,
 		topicURL,
 		callbackURL,
+		prefix,
 	}
 }
 
@@ -128,11 +134,21 @@ func (gp *GoPub) processSubQueue() {
 	challenge := hex.EncodeToString(buf)
 
 	values := verifyURL.Query()
-	values.Set("hub.mode", req.mode)
-	values.Set("hub.topic", req.topic.String())
-	values.Set("hub.challenge", challenge)
+	if !req.prefix {
+		values.Set("mode", req.mode)
+		values.Set("topic", req.topic.String())
+		values.Set("challenge", challenge)
+	} else {
+		values.Set("hub.mode", req.mode)
+		values.Set("hub.topic", req.topic.String())
+		values.Set("hub.challenge", challenge)
+	}
 	if req.mode == "subscribe" {
-		values.Set("hub.lease_seconds", strconv.Itoa(60*60*24*7))
+		if !req.prefix {
+			values.Set("lease_seconds", strconv.Itoa(60*60*24*7))
+		} else {
+			values.Set("hub.lease_seconds", strconv.Itoa(60*60*24*7))
+		}
 	}
 	verifyURL.RawQuery = values.Encode()
 
